@@ -1,4 +1,4 @@
-import os 
+import os
 # Cap computation to on thread
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -21,12 +21,12 @@ SPORT = 'basketball_nba'
 player_stats, team_stats, _  = fetch_nba_data_sets()
 # Clean player box score stats, get latest
 refined_player_stats_df = refine_nba_stats(player_stats, team_stats)
-refined_player_stats_df = build_features(refined_player_stats_df, 
+refined_player_stats_df = build_features(refined_player_stats_df,
    ['points', 'assists', 'blocks', 'steals', 'threePointersMade', 'threePointersAttempted', 'reboundsOffensive', 'reboundsTotal',
     'plusMinusPoints', 'usageRate','trueShooting', 'effectiveFieldGoal', 'freeThrowsPercentage', 'fieldGoalsPercentage',
-    'threePointersPercentage', 'totalReboundingRate', 'opponentTeamBlocks', 'opponentTeamSteals', 'opponentTeamPlusMinusPoints', 
+    'threePointersPercentage', 'totalReboundingRate', 'opponentTeamBlocks', 'opponentTeamSteals', 'opponentTeamPlusMinusPoints',
     'opponentTeamTotalReboundingRate', 'opponentDefensiveRating', 'numMinutes', 'turnovers',
-    'opponentTeamReboundsOffensive', 'opponentTeamReboundsDefensive', 'opponentTeamFieldGoalsAttempted', 
+    'opponentTeamReboundsOffensive', 'opponentTeamReboundsDefensive', 'opponentTeamFieldGoalsAttempted',
     'opponentTeamFieldGoalsMade', 'opponentTeamFieldGoalsPercentage'], 'gameDate')
 
 all_props = collect_all_player_props()
@@ -48,7 +48,7 @@ for mod_type in ['progressive', 'progressive_isotonic']:
         # Get latest per model type/stat
         market_col, target_col, latest_model, latest_mod_path = get_latest_model_in_log(sport=SPORT, stat_type=stat, model_type=mod_type)
 
-        predicts = prop_model_evaluation(model=latest_model, model_type=mod_type, model_path=latest_mod_path, 
+        predicts = prop_model_evaluation(model=latest_model, model_type=mod_type, model_path=latest_mod_path,
                                          stat_type=stat, props_box_df=props_and_box, sport=SPORT)
         if not predicts.empty:
             all_results.append(predicts)
@@ -112,7 +112,3 @@ best_models['model_filter'] = best_models['modelType']+ '-' + best_models['marke
 all_predictions_df['model_filter'] = all_predictions_df['modelType']+ '-' + all_predictions_df['marketType']
 path_to_best_models = all_predictions_df[all_predictions_df.model_filter.isin(best_models.model_filter)]['modelPath'].unique()
 replace_active_models(model_path_list=path_to_best_models, sport=SPORT, stat_list=['points', 'assists', 'threes', 'rebounds', 'steals', 'blocks']) # update production models
-
-
-
-

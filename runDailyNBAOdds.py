@@ -1,4 +1,4 @@
-import os 
+import os
 # Cap computation to on thread
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -7,7 +7,7 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 import gc
 import configparser
-import numpy as np 
+import numpy as np
 import pandas as pd
 import warnings
 warnings.filterwarnings("ignore")
@@ -20,9 +20,9 @@ from time import sleep
 from kaggle.api.kaggle_api_extended import KaggleApi
 from xgboost import XGBRegressor
 from scipy.stats import norm
-from bettingBotUtil.Utilities import (fetch_nba_data_sets, refine_nba_stats, build_features, predict_outcome_label, outcome_label, get_current_events, 
+from bettingBotUtil.Utilities import (fetch_nba_data_sets, refine_nba_stats, build_features, predict_outcome_label, outcome_label, get_current_events,
 	get_current_player_props, clean_props_with_boxscore, market_splitter, ml_feature_selection, predict_outcome_label, email_betting_odds,
-	collect_and_merge_predictions_and_outcomes, check_sports_schedule, get_active_model_for_production)
+	collect_and_merge_predictions_and_outcomes, check_sports_schedule, get_active_model_for_production, get_high_accuracy_player_market)
 
 # Keep readible formatting for probability
 pd.set_option('display.float_format', '{:.2f}'.format)
@@ -53,12 +53,12 @@ player_stats, team_stats, _  = fetch_nba_data_sets()
 
 # Clean player box score stats, get latest
 refined_player_stats_df = refine_nba_stats(player_stats, team_stats)
-refined_player_stats_df = build_features(refined_player_stats_df, 
+refined_player_stats_df = build_features(refined_player_stats_df,
    ['points', 'assists', 'blocks', 'steals', 'threePointersMade', 'threePointersAttempted', 'reboundsOffensive', 'reboundsTotal',
     'plusMinusPoints', 'usageRate','trueShooting', 'effectiveFieldGoal', 'freeThrowsPercentage', 'fieldGoalsPercentage',
-    'threePointersPercentage', 'totalReboundingRate', 'opponentTeamBlocks', 'opponentTeamSteals', 'opponentTeamPlusMinusPoints', 
+    'threePointersPercentage', 'totalReboundingRate', 'opponentTeamBlocks', 'opponentTeamSteals', 'opponentTeamPlusMinusPoints',
     'opponentTeamTotalReboundingRate', 'opponentDefensiveRating', 'numMinutes', 'turnovers',
-    'opponentTeamReboundsOffensive', 'opponentTeamReboundsDefensive', 'opponentTeamFieldGoalsAttempted', 
+    'opponentTeamReboundsOffensive', 'opponentTeamReboundsDefensive', 'opponentTeamFieldGoalsAttempted',
     'opponentTeamFieldGoalsMade', 'opponentTeamFieldGoalsPercentage'], 'gameDate')
 
 
@@ -84,12 +84,12 @@ if props_boxscore_df.empty:
 	print("No refined player stats maps to any current player props")
 	exit()
 
-props_boxscore_df = props_boxscore_df[props_boxscore_df['eventDateTime'].dt.tz_convert("US/Eastern").dt.date == datetime.now(ZoneInfo("America/New_York")).date()]													
+props_boxscore_df = props_boxscore_df[props_boxscore_df['eventDateTime'].dt.tz_convert("US/Eastern").dt.date == datetime.now(ZoneInfo("America/New_York")).date()]
 if props_boxscore_df.empty:
 	print("No upcoming Games for today")
 	exit()
 
-# Adjust "home" field to ensure that upcoming game is either home or away 
+# Adjust "home" field to ensure that upcoming game is either home or away
 props_boxscore_df['home'] = props_boxscore_df.apply(lambda row: 1 if row['homeTeam'] == row['playerteamName'] else 0, axis=1)
 
 ####### Step 2 - Data Cleaning/ Prepping for ML #######
@@ -119,7 +119,7 @@ for market in props_boxscore_market_dict.keys():
 	props_box_stat = props_box_stat.drop(drop_columns, axis=1, errors='ignore')
 	print(f"Total Merged {stat_type} Props", len(props_box_stat))
 
-	# Get Active production model 
+	# Get Active production model
 	ml_features = ml_feature_selection(SPORT, market)
 	active_model, active_model_path = get_active_model_for_production(sport=SPORT, stat_type=stat_type)
 
@@ -154,9 +154,12 @@ os.makedirs(os.path.dirname(file_path), exist_ok=True)
 props_box_predicts.to_parquet(file_path, engine="pyarrow", index=False)
 
 ####### Step 5 - Send email #######
+# Get acc rate list
+acc_player_list = get_high_accuracy_player_market()
+# Prep and filter DF
 daily_predictions_df = props_box_predicts.sort_values('probability', ascending=False).drop_duplicates(['eventId', 'personId', 'market'])
+daily_predictions_df['personId_market'] = daily_predictions_df['personId'].astype(str) + "-" + daily_predictions_df['market']
+daily_predictions_df = daily_predictions_df[daily_predictions_df['personId_market'].isin(acc_player_list)]
+daily_predictions_df = daily_predictions_df.drop('personId_market', axis=1)
+
 email_betting_odds(daily_predictions_df)
-
-
-
-
