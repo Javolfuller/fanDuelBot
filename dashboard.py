@@ -39,6 +39,7 @@ Usage: Ideal for evaluating model performance, identifying trends, and debugging
 view = st.radio("Select a View", ["Monthly :chart_with_upwards_trend:", "Game By Game :date:"])
 
 # Filter list
+all_predictions = all_predictions[all_predictions['player'] != 'Jaylin Williams'].copy()
 players_tuple = tuple(all_predictions['player'].unique())
 player_select = st.selectbox('Select a player', options=players_tuple)
 previous_view = (datetime.now() - relativedelta(months=1)).date() # past month
