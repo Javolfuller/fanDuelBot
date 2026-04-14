@@ -24,6 +24,7 @@ from scipy.stats import norm
 
 # read in production predictions
 all_predictions = pd.read_parquet("./outcomes/results/basketball_nba/basketball_nba_2025.parquet")
+# all_predictions = pd.read_parquet("../Downloads/basketball_nba_2025.parquet")
 all_predictions = all_predictions[all_predictions['outcomeStat'].notna()]
 
 st.set_page_config(layout="wide")
@@ -42,12 +43,14 @@ view = st.radio("Select a View", ["Monthly :chart_with_upwards_trend:", "Game By
 all_predictions = all_predictions[all_predictions['player'] != 'Jaylin Williams'].copy()
 players_tuple = tuple(all_predictions['player'].unique())
 player_select = st.selectbox('Select a player', options=players_tuple)
-previous_view = (datetime.now() - relativedelta(months=1)).date() # past month
+previous_view = (all_predictions['eventDateTime'].max() - relativedelta(months=1)).date() # past month
 all_predictions = all_predictions[all_predictions['eventDate'] >= previous_view].copy()
 full_name_id_select = all_predictions[all_predictions['player'] == player_select]['fullNameId'].iloc[0]
+print(full_name_id_select)
 
 # get player image
 path = './player_images/'
+# path = './player_images/'
 image_folder = os.listdir(path)
 fullNameId = full_name_id_select.upper().replace('.', '').replace(' ', '').replace('-', '')
 
